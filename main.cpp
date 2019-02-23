@@ -37,6 +37,7 @@ std::array<unsigned char, 64> sha512(std::istream &input)
         input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
         mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
         dataCount += input.gcount();
+        LOG(DEBUG, "SHA512 already processed %lu, last read %d, file position: %lu", dataCount, input.gcount(), input.tellg());
     } while (input.gcount() == buffer.size());
     LOG(DEBUG, "SHA512 hash generated out of %lu bytes", dataCount);
 
@@ -201,14 +202,20 @@ int main(int argc, char **argv)
             status.input.seekg(-64, std::ios::end);
             std::array<unsigned char, 64> originalHash, newHash;
             status.input.read(reinterpret_cast<char *>(originalHash.data()), 64);
+            
+            status.output.close();
 
-            std::ifstream decryptedFile(outputFilename);
-            newHash = sha512(decryptedFile);
+            std::ifstream decryptedFile(outputFilename, std::ios::binary | std::ios::in);
+            if (!decryptedFile.is_open())
+                LOG(WARN, "Cannot check hash");
+            else {
+                newHash = sha512(decryptedFile);
 
-            if (newHash == originalHash)
-                LOG(INFO, "OK! Hashes are same");
-            else
-                LOG(WARN, "Hashes are not the same!");
+                if (newHash == originalHash)
+                    LOG(INFO, "OK! Hashes are same");
+                else
+                    LOG(WARN, "Hashes are not the same!");
+            }
         }
     }
     catch (std::exception &err)

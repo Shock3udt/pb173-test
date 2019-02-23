@@ -1,12 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <error.h>
+#ifdef __linux__
 #include <syslog.h>
+#else
+#define LOG_DEBUG 0
+#define LOG_ERR 0
+#define LOG_WARNING 0
+#define LOG_INFO 0
+
+#define error(return_code, errno, msg, ...) do { \
+	fprintf(stderr, msg, ##__VA_ARGS__);	\
+	perror(errno);	\
+	if(return_code)	\
+		exit(return_code);	\
+	} while(0);
+#endif
 #include <string.h>
 #include <stdarg.h>
 
 #include "mylog.h"
-
 
 struct log_file
 {
@@ -75,8 +88,10 @@ void closeMyLog(void)
 	}
 	if (MainLog != NULL)
 		free(MainLog);
+#ifdef __linux__
 	if (OUT_SYSLOG & MainLog->flags)
 		closelog();
+#endif
 	MainLog = NULL;
 }
 
@@ -135,8 +150,10 @@ void startMyLog(int flags,int filters, const char *identity)
 	}
 	MainLog->files = NULL;
 
+#ifdef  __linux__
 	if (OUT_SYSLOG & flags)
 		openlog(identity, 0, LOG_USER);
+#endif
 
 	// If flag OUT_STDERR is set then adds stderr to ouput
 	if (OUT_STDERR & flags)
@@ -227,6 +244,7 @@ void logMessage(int level, const char *filename, int line, const char *msg, ...)
 	}
 }
 
+#ifdef __linux__
 void mySyslog(int logLvl, const char *filename, int line, const char *msg, ...)
 {
 	if (MainLog == NULL)
@@ -258,3 +276,12 @@ void mySyslog(int logLvl, const char *filename, int line, const char *msg, ...)
 	}
 }
 
+#else
+void mySyslog(int logLvl, const char *filename, int line, const char *msg, ...) {
+    (void) logLvl;
+    (void) filename;
+    (void) line;
+    (void) msg;
+}
+
+#endif
