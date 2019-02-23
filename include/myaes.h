@@ -177,7 +177,7 @@ class AES
     AES() : key_()
     {
         LOG(DEBUG, "AES Creating object with random genereated key");
-        key.generateNew();
+        key_.generateNew();
     }
 
     explicit AES(Key key) : key_(std::move(key))
