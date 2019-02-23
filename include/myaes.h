@@ -14,16 +14,22 @@
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 
+// AES class used for encryption / decryption
+// keyBytes is number of bytes for key:
+//      (keyBytes == 16) => (key == 128 bit)
+//      (keyBytes == 32) => (key == 256 bit) 
 template <size_t keyBytes>
 class AES
 {
   public:
+    // Key structure for symplifying work with AES key 
     struct Key
     {
       private:
         std::array<unsigned char, 16> iv;
         std::array<unsigned char, keyBytes> key;
 
+        // generates random key with DRBG
         void generateKey()
         {
             mbedtls_ctr_drbg_context ctr_drbg;
@@ -44,6 +50,7 @@ class AES
             mbedtls_entropy_free(&entropy);
         }
 
+        // generates random incialization vector with DRBG
         void generateIV()
         {
             mbedtls_ctr_drbg_context ctr_drbg;
@@ -71,6 +78,12 @@ class AES
             LOG(DEBUG, "empty key (%lu) object created", keyBytes);
         }
 
+        explicit Key(std::istream &source)
+        {
+            static_assert(keyBytes == 16 || keyBytes == 32);
+            loadFromFile(source);
+        }
+
         void generateNew()
         {
             generateIV();
@@ -83,6 +96,7 @@ class AES
                 iv[5], iv[6], iv[7], iv[8], iv[9], iv[10], iv[11], iv[12], iv[13], iv[14], iv[15], iv[16]);
         }
 
+        // import key from file
         void loadFromFile(std::istream &source)
         {
             uint16_t keyLen = 0;
@@ -103,12 +117,8 @@ class AES
                 iv[5], iv[6], iv[7], iv[8], iv[9], iv[10], iv[11], iv[12], iv[13], iv[14], iv[15], iv[16]);
         }
 
-        explicit Key(std::istream &source)
-        {
 
-            loadFromFile(source);
-        }
-
+        // export key to file
         void save(std::ostream &os)
         {
             uint16_t keyLen = keyBytes;
@@ -117,22 +127,29 @@ class AES
             os.write(reinterpret_cast<char *>(iv.data()), iv.size());
         }
 
+        // set aes context "ctx" for encryption
         int setEncContext(mbedtls_aes_context *ctx)
         {
             return mbedtls_aes_setkey_enc(ctx, key.data(), keyBytes * 8);
         }
+
+        // set aes context "ctx" for decryption
         int setDecContext(mbedtls_aes_context *ctx)
         {
             return mbedtls_aes_setkey_dec(ctx, key.data(), keyBytes * 8);
         }
 
+        // returns copy of incialization vector
         std::array<unsigned char, 16> incializationVector() { return iv; }
+       
+        // returns bitsize of key
         size_t bitSize() { return keyBytes * 8; }
     };
 
   private:
     Key key_;
 
+    // pad 16 bytes block with PKCS#7 padding
     int pad(unsigned char *ptr, unsigned char bytesToPad)
     {
         if (bytesToPad == 0)
@@ -143,6 +160,7 @@ class AES
         return bytesToPad;
     }
 
+    // remove PKCS#7 padding
     int unpad(unsigned char *lastByte, size_t &read_)
     {
         unsigned char bytesPaded = *lastByte;
@@ -159,6 +177,7 @@ class AES
     AES() : key_()
     {
         LOG(DEBUG, "AES Creating object with random genereated key");
+        key.generateNew();
     }
 
     explicit AES(Key key) : key_(std::move(key))
@@ -166,6 +185,7 @@ class AES
         LOG(DEBUG, "AES Creating object with supplied key");
     }
 
+    // encrypts "input" file to "output" file
     void encrypt(std::istream &input, std::ostream &output)
     {
 
@@ -207,6 +227,7 @@ class AES
         mbedtls_aes_free(&ctx);
     }
 
+    // decrypts "input" file to "output" file
     void decrypt(std::istream &input, std::ostream &output, size_t bytes)
     {
         LOG(DEBUG, "AES Starting decryption");
@@ -246,7 +267,6 @@ class AES
 
     ~AES()
     {
-
         LOG(DEBUG, "AES Destroying object");
     }
 };

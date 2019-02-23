@@ -9,6 +9,8 @@
 
 #include "mbedtls/sha512.h"
 
+
+// Control structure 
 struct Status
 {
     enum
@@ -22,6 +24,7 @@ struct Status
     std::ofstream output;
 };
 
+// function hashing file
 std::array<unsigned char, 64> sha512(std::istream &input)
 {
     LOG(DEBUG, "SHA512 Generating hash");
@@ -47,15 +50,7 @@ std::array<unsigned char, 64> sha512(std::istream &input)
     return hash;
 }
 
-std::ostream &operator<<(std::ostream &os, std::array<unsigned char, 64> toPrint)
-{
-    for (const auto &c : toPrint)
-    {
-        os << std::hex << static_cast<unsigned int>(c) << std::dec;
-    }
-    return os;
-}
-
+// returns string after "option" in arguments
 char *getCmdOption(char **begin, char **end, const std::string &option)
 {
     char **itr = std::find(begin, end, option);
@@ -66,6 +61,7 @@ char *getCmdOption(char **begin, char **end, const std::string &option)
     return 0;
 }
 
+// checks whether cmd option was entered
 bool cmdOptionExists(char **begin, char **end, const std::string &option)
 {
     return std::find(begin, end, option) != end;
@@ -73,8 +69,7 @@ bool cmdOptionExists(char **begin, char **end, const std::string &option)
 
 int main(int argc, char **argv)
 {
-    Status status{Status::NotSet, FILTER_INFO, {}, {}};
-
+    // if -h/--help is specified prints help and finishes succesfuly
     if (cmdOptionExists(argv, argv + argc, "-h") || cmdOptionExists(argv, argv + argc, "--help"))
     {
         std::cout << "./pb173_01 [OPTIONS]\n"
@@ -88,6 +83,10 @@ int main(int argc, char **argv)
         return 0;
     }
 
+    // default status structure
+    Status status{Status::NotSet, FILTER_INFO, {}, {}};
+
+    // seting specified mode: ENCRYPTION / DECRYPTION
     std::string modeStr;
     if (cmdOptionExists(argv, argv + argc, "--mode"))
         modeStr = getCmdOption(argv, argv + argc, "--mode");
@@ -109,9 +108,11 @@ int main(int argc, char **argv)
         throw std::runtime_error("Unknown mode option");
     }
 
+    // if option -d is specified sets logging level to DEBUG
     if (cmdOptionExists(argv, argv + argc, "-d"))
         status.loglevel = FILTER_DEBUG;
 
+    // openinig input file
     if (!cmdOptionExists(argv, argv + argc, "-i"))
         throw std::runtime_error("Input file must be specified");
 
@@ -120,6 +121,7 @@ int main(int argc, char **argv)
     if (!status.input.is_open())
         throw std::runtime_error("Couldn't open input file");
 
+    // opennig/creating output file
     std::string outputFilename;
     if (cmdOptionExists(argv, argv + argc, "-o"))
     {
@@ -139,23 +141,27 @@ int main(int argc, char **argv)
             throw std::runtime_error("Couldn't open output file");
     }
 
+    // enforcing specification of key when trying to decrypt
     if (status.mode == Status::Decrypt && !cmdOptionExists(argv, argv + argc, "-k"))
         throw std::runtime_error("Key have to be specified for decryption");
 
+    // starting my log
     startMyLog(OUT_STDERR, status.loglevel, "PB173-HW01");
 
     try
     {
-
+        // generating / loading key
         AES<16>::Key key;
 
         if (cmdOptionExists(argv, argv + argc, "-k"))
         {
+            // if keyfile is specified try to load
             std::string keyFilename = getCmdOption(argv, argv + argc, "-k");
 
             std::ifstream keyFile(keyFilename, std::ios::binary | std::ios::in);
             if (!keyFile.is_open())
             {
+                // if opening key file for reading fails, tryies to create new
                 key.generateNew();
 
                 std::ofstream keyFile("random.key", std::ios::binary | std::ios::out);
@@ -169,6 +175,7 @@ int main(int argc, char **argv)
         }
         else
         {
+            // if key file is not specified, generate new and save it
             key.generateNew();
 
             std::ofstream keyFile("random.key", std::ios::binary | std::ios::out);
@@ -181,36 +188,41 @@ int main(int argc, char **argv)
         AES<16> crypt(key);
         if (status.mode == Status::Encrypt)
         {
-
+            // encrypt file and rewind
             crypt.encrypt(status.input, status.output);
             status.input.clear();
             status.input.seekg(0);
 
+            // generate hash and save it to file
             std::array<unsigned char, 64> hash = sha512(status.input);
             status.output.write(reinterpret_cast<char *>(hash.data()), 64);
         }
         else
         {
+            // find where encrypted file ends and hash starts
             status.input.seekg(-64, std::ios::end);
             size_t bytes = status.input.tellg();
-
+            
+            // rewind and decrypt file
             status.input.clear();
             status.input.seekg(0);
             crypt.decrypt(status.input, status.output, bytes);
 
+            // read original hash
             status.input.clear();
             status.input.seekg(-64, std::ios::end);
             std::array<unsigned char, 64> originalHash, newHash;
             status.input.read(reinterpret_cast<char *>(originalHash.data()), 64);
-            
             status.output.close();
 
+            // try generating new hash from decrypted file
             std::ifstream decryptedFile(outputFilename, std::ios::binary | std::ios::in);
             if (!decryptedFile.is_open())
-                LOG(WARN, "Cannot check hash");
+                LOG(WARN, "Cannot check hash"); // warning if cannot open decrypted file
             else {
                 newHash = sha512(decryptedFile);
-
+                
+                // compare hashes and inform user about outcome
                 if (newHash == originalHash)
                     LOG(INFO, "OK! Hashes are same");
                 else
