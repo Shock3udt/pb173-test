@@ -3,9 +3,7 @@ project(pb173hw)
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-set(CMAKE_C_COMPILER "gcc")
-set(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17")
 
 set(MYLOG_SOURCE_FILES library/mylog.c)
 add_library(mylog STATIC ${MYLOG_SOURCE_FILES})

@@ -157,14 +157,16 @@ int main(int argc, char **argv)
         {
             // if keyfile is specified try to load
             std::string keyFilename = getCmdOption(argv, argv + argc, "-k");
-
+            
+            LOG(DEBUG, "Opening key file");
             std::ifstream keyFile(keyFilename, std::ios::binary | std::ios::in);
             if (!keyFile.is_open())
             {
+                LOG(DEBUG, "Failed to open file, creating new");
                 // if opening key file for reading fails, tryies to create new
                 key.generateNew();
 
-                std::ofstream keyFile("random.key", std::ios::binary | std::ios::out);
+                std::ofstream keyFile(keyFilename, std::ios::binary | std::ios::out);
                 if (!keyFile.is_open())
                     LOG(INFO, "Cannot access key file");
                 else
