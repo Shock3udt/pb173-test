@@ -34,14 +34,14 @@ struct log_control
     struct log_file *files;
 };
 
-struct mapLogLvl
+const struct mapLogLvl
 {
 	int mylog, syslog;
-	const char str[8];
-} Levels[] = {{DEBUG, LOG_DEBUG, "DEBUG"},
-			  {ERR, LOG_ERR, "ERROR"},
-			  {WARN, LOG_WARNING, "WARNING"},
-			  {INFO, LOG_INFO, "INFO"},
+	const char str[32];
+} Levels[] = {{DEBUG, LOG_DEBUG,   "DEBUG"},
+			  {ERR,   LOG_ERR,     "\033[31mERROR\033[0m"},
+			  {WARN,  LOG_WARNING, "\033[31mWARNING\033[0m"},
+			  {INFO,  LOG_INFO,    "INFO"},
 			  {0}};
 
 struct log_control *MainLog = NULL;

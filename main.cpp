@@ -33,14 +33,14 @@ std::array<unsigned char, 64> sha512(std::istream &input)
     mbedtls_sha512_starts(&ctx, 0);
 
     std::array<unsigned char, 64> hash{0};
-    std::array<unsigned char, 4096> buffer;
+    std::array<unsigned char, 4096> buffer{0};
     size_t dataCount = 0;
     do
     {
         input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
         mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
         dataCount += input.gcount();
-        LOG(DEBUG, "SHA512 already processed %lu, last read %d, file position: %lu", dataCount, input.gcount(), input.tellg());
+        LOG(DEBUG, "SHA512 already processed %lu, last read %d", dataCount, input.gcount());
     } while (input.gcount() == buffer.size());
     LOG(DEBUG, "SHA512 hash generated out of %lu bytes", dataCount);
 
@@ -58,7 +58,7 @@ char *getCmdOption(char **begin, char **end, const std::string &option)
     {
         return *itr;
     }
-    return 0;
+    return nullptr;
 }
 
 // checks whether cmd option was entered
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
             // read original hash
             status.input.clear();
             status.input.seekg(-64, std::ios::end);
-            std::array<unsigned char, 64> originalHash, newHash;
+            std::array<unsigned char, 64> originalHash{0}, newHash{0};
             status.input.read(reinterpret_cast<char *>(originalHash.data()), 64);
             status.output.close();
 

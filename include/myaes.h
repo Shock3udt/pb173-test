@@ -7,7 +7,7 @@
 
 #include <array>
 #include "mylog.h"
-#include <stdint.h>
+#include <cstdint>
 
 #include "mbedtls/config.h"
 #include "mbedtls/aes.h"
@@ -72,13 +72,13 @@ class AES
         }
 
       public:
-        explicit Key()
+        explicit Key() : iv{}, key{}
         {
             static_assert(keyBytes == 16 || keyBytes == 32);
             LOG(DEBUG, "empty key (%lu) object created", keyBytes);
         }
 
-        explicit Key(std::istream &source)
+        explicit Key(std::istream &source) : iv{}, key{}
         {
             static_assert(keyBytes == 16 || keyBytes == 32);
             loadFromFile(source);
@@ -123,7 +123,7 @@ class AES
         {
             uint16_t keyLen = keyBytes;
             os.write(reinterpret_cast<char *>(&keyLen), 2);
-            os.write(reinterpret_cast<char *>(key.data()), key.size());
+            os.write(reinterpret_cast<char *>(key.data()), keyBytes);
             os.write(reinterpret_cast<char *>(iv.data()), iv.size());
         }
 
@@ -161,11 +161,13 @@ class AES
     }
 
     // remove PKCS#7 padding
-    int unpad(unsigned char *lastByte, size_t &read_)
+    int unpad(const unsigned char *lastByte, size_t &read_)
     {
         unsigned char bytesPaded = *lastByte;
 
         LOG(DEBUG, "Padding %u bytes detected", bytesPaded);
+        if (bytesPaded > 16)
+            throw std::runtime_error("Invalid padding");
         for (unsigned char i = 1; i < bytesPaded; i++)
             if (*(lastByte - i) != bytesPaded)
                 LOG(WARN, "AES Detected wrong padding at -%u (%u)", i, *(lastByte - i));
@@ -196,7 +198,7 @@ class AES
         mbedtls_aes_init(&ctx);
         key_.setEncContext(&ctx);
 
-        std::array<unsigned char, 16 * 100> dataInBuffer, dataOutBuffer;
+        std::array<unsigned char, 16 * 500> dataInBuffer{0}, dataOutBuffer{0};
         std::array<unsigned char, 16> iv = key_.incializationVector();
 
         size_t alreadyEncrypted = 0;
@@ -237,7 +239,7 @@ class AES
         mbedtls_aes_init(&ctx);
         key_.setDecContext(&ctx);
 
-        std::array<unsigned char, 16 * 100> dataInBuffer, dataOutBuffer;
+        std::array<unsigned char, 16 * 500> dataInBuffer{0}, dataOutBuffer{0};
         std::array<unsigned char, 16> iv = key_.incializationVector();
 
         size_t alreadyDecrypted = 0;
