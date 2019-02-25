@@ -135,7 +135,7 @@ int main(int argc, char **argv)
     {
 
         outputFilename = inputFilename;
-        outputFilename += ".cry";
+        outputFilename += ".out";
         status.output.open(outputFilename, std::ios::binary | std::ios::out);
         if (!status.output.is_open())
             throw std::runtime_error("Couldn't open output file");
