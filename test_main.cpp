@@ -8,7 +8,7 @@
 #include <array>
 #include <iomanip>
 #include "catch.hpp"
-#include "mylog.h"
+#include "litelog.h"
 
 std::ostream& operator<<(std::ostream& os, const std::array<unsigned char, 64>& hash) {
     os << std::hex ;
@@ -20,6 +20,7 @@ std::ostream& operator<<(std::ostream& os, const std::array<unsigned char, 64>& 
 }
 
 TEST_CASE("SHA-128") {
+
     std::stringstream input{};
     std::string expected_output{};
     std::stringstream output{};

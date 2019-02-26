@@ -4,7 +4,7 @@
 #include <fstream>
 #include <algorithm>
 
-#include "mylog.h"
+#include "litelog.h"
 #include "myaes.h"
 
 #include "mbedtls/sha512.h"
@@ -19,7 +19,7 @@ struct Status
         Encrypt,
         Decrypt
     } mode;
-    int loglevel;
+    unsigned short loglevel;
     std::ifstream input;
     std::ofstream output;
 };
@@ -59,7 +59,7 @@ int main(int argc, char **argv)
     }
 
     // default status structure
-    Status status{Status::NotSet, FILTER_INFO, {}, {}};
+    Status status{Status::NotSet, ll::MessageLevel::Info, {}, {}};
 
     // seting specified mode: ENCRYPTION / DECRYPTION
     std::string modeStr;
@@ -85,7 +85,7 @@ int main(int argc, char **argv)
 
     // if option -d is specified sets logging level to DEBUG
     if (cmdOptionExists(argv, argv + argc, "-d"))
-        status.loglevel = FILTER_DEBUG;
+        status.loglevel = ll::MessageLevel::Debug | ll::MessageLevel::Info;
 
     // openinig input file
     if (!cmdOptionExists(argv, argv + argc, "-i"))
@@ -121,8 +121,7 @@ int main(int argc, char **argv)
         throw std::runtime_error("Key have to be specified for decryption");
 
     // starting my log
-    startMyLog(OUT_STDERR, status.loglevel, "PB173-HW01");
-
+    ll::logging.setOutputLevel(std::cout, status.loglevel);
     try
     {
         // generating / loading key
@@ -132,18 +131,18 @@ int main(int argc, char **argv)
         {
             // if keyfile is specified try to load
             std::string keyFilename = getCmdOption(argv, argv + argc, "-k");
-            
-            LOG(MY_DEBUG, "Opening key file");
+
+            ll::logging << ll::MessageLevel::Debug << "Opening key file";
             std::ifstream keyFile(keyFilename, std::ios::binary | std::ios::in);
             if (!keyFile.is_open())
             {
-                LOG(MY_DEBUG, "Failed to open file, creating new");
+                ll::logging << ll::MessageLevel::Debug << "Failed to open key file, creating new";
                 // if opening key file for reading fails, tryies to create new
                 key.generateNew();
 
                 std::ofstream keyFile(keyFilename, std::ios::binary | std::ios::out);
                 if (!keyFile.is_open())
-                    LOG(MY_INFO, "Cannot access key file");
+                    throw std::runtime_error("cannot open key file");
                 else
                     key.save(keyFile);
             }
@@ -157,7 +156,7 @@ int main(int argc, char **argv)
 
             std::ofstream keyFile("random.key", std::ios::binary | std::ios::out);
             if (!keyFile.is_open())
-                LOG(MY_WARN, "Cannot create new key file");
+                throw std::runtime_error("cannot open key file");
             else
                 key.save(keyFile);
         }
@@ -195,21 +194,22 @@ int main(int argc, char **argv)
             // try generating new hash from decrypted file
             std::ifstream decryptedFile(outputFilename, std::ios::binary | std::ios::in);
             if (!decryptedFile.is_open())
-                LOG(MY_WARN, "Cannot check hash"); // warning if cannot open decrypted file
+                ll::logging << ll::MessageLevel::Warning
+                            << "Cannot check hash"; // warning if cannot open decrypted file
             else {
                 newHash = sha512(decryptedFile);
                 
                 // compare hashes and inform user about outcome
                 if (newHash == originalHash)
-                    LOG(MY_INFO, "OK! Hashes are same");
+                    ll::logging << ll::MessageLevel::Info << "OK! Hashes are same";
                 else
-                    LOG(MY_WARN, "Hashes are not the same!");
+                    ll::logging << ll::MessageLevel::Warning << "Hashes are not the same!";
             }
         }
     }
     catch (std::exception &err)
     {
-        LOG(MY_ERR, "Exception: %s", err.what());
+        ll::logging << ll::MessageLevel::Error << "Exception: " << err.what();
     }
 
     return 0;
