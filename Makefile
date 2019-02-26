@@ -2,9 +2,15 @@ LDFLAGS+= -L ./library/ -lmylog -lmbedtls
 CPPFLAGS+= -I ./include/
 CXXFLAGS+= -std=c++17 -Wall -Wextra
 
-all: pb173hw
+all: main test_main
 
-pb173hw: main.o library/libmylog.a library/libmbedtls.a
+test: main test_main
+    ./test_main
+
+test_main: test_main.o library/libmylog.a library/libmbedtls.a
+    $(CXX) $< $(LDFLAGS) -o $@
+
+main: main.o library/libmylog.a library/libmbedtls.a
 	$(CXX) $< $(LDFLAGS) -o $@
 
 library/libmylog.a:

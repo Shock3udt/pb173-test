@@ -24,31 +24,6 @@ struct Status
     std::ofstream output;
 };
 
-// function hashing file
-std::array<unsigned char, 64> sha512(std::istream &input)
-{
-    LOG(DEBUG, "SHA512 Generating hash");
-    mbedtls_sha512_context ctx;
-    mbedtls_sha512_init(&ctx);
-    mbedtls_sha512_starts(&ctx, 0);
-
-    std::array<unsigned char, 64> hash{0};
-    std::array<unsigned char, 4096> buffer{0};
-    size_t dataCount = 0;
-    do
-    {
-        input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
-        mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
-        dataCount += input.gcount();
-        LOG(DEBUG, "SHA512 already processed %lu, last read %d", dataCount, input.gcount());
-    } while (input.gcount() == buffer.size());
-    LOG(DEBUG, "SHA512 hash generated out of %lu bytes", dataCount);
-
-    mbedtls_sha512_finish(&ctx, hash.data());
-    mbedtls_sha512_free(&ctx);
-    LOG(INFO, "SHA512 hash successfully generated");
-    return hash;
-}
 
 // returns string after "option" in arguments
 char *getCmdOption(char **begin, char **end, const std::string &option)
@@ -158,17 +133,17 @@ int main(int argc, char **argv)
             // if keyfile is specified try to load
             std::string keyFilename = getCmdOption(argv, argv + argc, "-k");
             
-            LOG(DEBUG, "Opening key file");
+            LOG(MY_DEBUG, "Opening key file");
             std::ifstream keyFile(keyFilename, std::ios::binary | std::ios::in);
             if (!keyFile.is_open())
             {
-                LOG(DEBUG, "Failed to open file, creating new");
+                LOG(MY_DEBUG, "Failed to open file, creating new");
                 // if opening key file for reading fails, tryies to create new
                 key.generateNew();
 
                 std::ofstream keyFile(keyFilename, std::ios::binary | std::ios::out);
                 if (!keyFile.is_open())
-                    LOG(INFO, "Cannot access key file");
+                    LOG(MY_INFO, "Cannot access key file");
                 else
                     key.save(keyFile);
             }
@@ -182,7 +157,7 @@ int main(int argc, char **argv)
 
             std::ofstream keyFile("random.key", std::ios::binary | std::ios::out);
             if (!keyFile.is_open())
-                LOG(WARN, "Cannot create new key file");
+                LOG(MY_WARN, "Cannot create new key file");
             else
                 key.save(keyFile);
         }
@@ -220,21 +195,21 @@ int main(int argc, char **argv)
             // try generating new hash from decrypted file
             std::ifstream decryptedFile(outputFilename, std::ios::binary | std::ios::in);
             if (!decryptedFile.is_open())
-                LOG(WARN, "Cannot check hash"); // warning if cannot open decrypted file
+                LOG(MY_WARN, "Cannot check hash"); // warning if cannot open decrypted file
             else {
                 newHash = sha512(decryptedFile);
                 
                 // compare hashes and inform user about outcome
                 if (newHash == originalHash)
-                    LOG(INFO, "OK! Hashes are same");
+                    LOG(MY_INFO, "OK! Hashes are same");
                 else
-                    LOG(WARN, "Hashes are not the same!");
+                    LOG(MY_WARN, "Hashes are not the same!");
             }
         }
     }
     catch (std::exception &err)
     {
-        LOG(ERR, "Exception: %s", err.what());
+        LOG(MY_ERR, "Exception: %s", err.what());
     }
 
     return 0;

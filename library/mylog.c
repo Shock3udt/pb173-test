@@ -38,10 +38,10 @@ const struct mapLogLvl
 {
 	int mylog, syslog;
 	const char str[32];
-} Levels[] = {{DEBUG, LOG_DEBUG,   "DEBUG"},
-			  {ERR,   LOG_ERR,     "\033[31mERROR\033[0m"},
-			  {WARN,  LOG_WARNING, "\033[31mWARNING\033[0m"},
-			  {INFO,  LOG_INFO,    "INFO"},
+} Levels[] = {{MY_DEBUG, LOG_DEBUG,   "DEBUG"},
+			  {MY_ERR,   LOG_ERR,     "\033[31mERROR\033[0m"},
+			  {MY_WARN,  LOG_WARNING, "\033[31mWARNING\033[0m"},
+			  {MY_INFO,  LOG_INFO,    "INFO"},
 			  {0}};
 
 struct log_control *MainLog = NULL;
@@ -195,7 +195,7 @@ void logMessage(int level, const char *filename, int line, const char *msg, ...)
 		va_list argptr;
 		va_start(argptr, msg); 
 		
-		if (level == DEBUG)
+		if (level == MY_DEBUG)
 		{
 			// Creates format string from message and logging information
 			size_t lengthOfFormat;

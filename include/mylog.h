@@ -45,15 +45,16 @@
 #define OUT_FILE 0b100000
 #define OUT_STDERR 0b1000000
 
+#define FILETR_NONE 0b1111
 #define FILTER_ERROR 0b111
 #define FILTER_WARN 0b11
 #define FILTER_INFO 0b1
 #define FILTER_DEBUG 0
 
-#define ERR 0b1000
-#define WARN 0b100
-#define INFO 0b10
-#define DEBUG 0b1
+#define MY_ERR 0b1000
+#define MY_WARN 0b100
+#define MY_INFO 0b10
+#define MY_DEBUG 0b1
 
 #ifdef __linux__
 #define LOG(level, msg, ...)                                       \

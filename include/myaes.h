@@ -8,6 +8,7 @@
 #include <array>
 #include "mylog.h"
 #include <cstdint>
+#include <fstream>
 
 #include "mbedtls/config.h"
 #include "mbedtls/aes.h"
@@ -75,7 +76,7 @@ class AES
         explicit Key() : iv{}, key{}
         {
             static_assert(keyBytes == 16 || keyBytes == 32);
-            LOG(DEBUG, "empty key (%lu) object created", keyBytes);
+            LOG(MY_DEBUG, "empty key (%lu) object created", keyBytes);
         }
 
         explicit Key(std::istream &source) : iv{}, key{}
@@ -89,10 +90,10 @@ class AES
             generateIV();
             generateKey();
 
-            LOG(INFO, "New key generated");
-            LOG(DEBUG, "AES key: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", key[0], key[1], key[2], key[3], key[4],
+            LOG(MY_INFO, "New key generated");
+            LOG(MY_DEBUG, "AES key: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", key[0], key[1], key[2], key[3], key[4],
                 key[5], key[6], key[7], key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15], key[16]);
-            LOG(DEBUG, "AES iv: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", iv[0], iv[1], iv[2], iv[3], iv[4],
+            LOG(MY_DEBUG, "AES iv: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", iv[0], iv[1], iv[2], iv[3], iv[4],
                 iv[5], iv[6], iv[7], iv[8], iv[9], iv[10], iv[11], iv[12], iv[13], iv[14], iv[15], iv[16]);
         }
 
@@ -110,10 +111,10 @@ class AES
             if (source.gcount() != 16)
                 throw std::runtime_error("invalid key file");
 
-            LOG(INFO, "Key loaded from file");
-            LOG(DEBUG, "AES key: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", key[0], key[1], key[2], key[3], key[4],
+            LOG(MY_INFO, "Key loaded from file");
+            LOG(MY_DEBUG, "AES key: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", key[0], key[1], key[2], key[3], key[4],
                 key[5], key[6], key[7], key[8], key[9], key[10], key[11], key[12], key[13], key[14], key[15], key[16]);
-            LOG(DEBUG, "AES iv: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", iv[0], iv[1], iv[2], iv[3], iv[4],
+            LOG(MY_DEBUG, "AES iv: %x %x %x %x - %x %x %x %x - %x %x %x %x - %x %x %x %x", iv[0], iv[1], iv[2], iv[3], iv[4],
                 iv[5], iv[6], iv[7], iv[8], iv[9], iv[10], iv[11], iv[12], iv[13], iv[14], iv[15], iv[16]);
         }
 
@@ -154,7 +155,7 @@ class AES
     {
         if (bytesToPad == 0)
             bytesToPad = 16;
-        LOG(DEBUG, "AES padding %u bytes", bytesToPad);
+        LOG(MY_DEBUG, "AES padding %u bytes", bytesToPad);
         for (int i = 0; i < bytesToPad; i++)
             *(ptr + i) = bytesToPad;
         return bytesToPad;
@@ -165,12 +166,12 @@ class AES
     {
         unsigned char bytesPaded = *lastByte;
 
-        LOG(DEBUG, "Padding %u bytes detected", bytesPaded);
+        LOG(MY_DEBUG, "Padding %u bytes detected", bytesPaded);
         if (bytesPaded > 16)
             throw std::runtime_error("Invalid padding");
         for (unsigned char i = 1; i < bytesPaded; i++)
             if (*(lastByte - i) != bytesPaded)
-                LOG(WARN, "AES Detected wrong padding at -%u (%u)", i, *(lastByte - i));
+                LOG(MY_WARN, "AES Detected wrong padding at -%u (%u)", i, *(lastByte - i));
         read_ -= bytesPaded;
         return bytesPaded;
     }
@@ -178,27 +179,27 @@ class AES
   public:
     AES() : key_()
     {
-        LOG(DEBUG, "AES Creating object with random genereated key");
+        LOG(MY_DEBUG, "AES Creating object with random genereated key");
         key_.generateNew();
     }
 
     explicit AES(Key key) : key_(std::move(key))
     {
-        LOG(DEBUG, "AES Creating object with supplied key");
+        LOG(MY_DEBUG, "AES Creating object with supplied key");
     }
 
     // encrypts "input" file to "output" file
     void encrypt(std::istream &input, std::ostream &output)
     {
 
-        LOG(DEBUG, "AES Starting encryption");
+        LOG(MY_DEBUG, "AES Starting encryption");
 
-        LOG(DEBUG, "AES Setting up aes context");
+        LOG(MY_DEBUG, "AES Setting up aes context");
         mbedtls_aes_context ctx;
         mbedtls_aes_init(&ctx);
         key_.setEncContext(&ctx);
 
-        std::array<unsigned char, 16 * 500> dataInBuffer{0}, dataOutBuffer{0};
+        std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
         std::array<unsigned char, 16> iv = key_.incializationVector();
 
         size_t alreadyEncrypted = 0;
@@ -210,7 +211,7 @@ class AES
             read_ = input.gcount();
             toWrite = read_;
 
-            LOG(DEBUG, "AES %lu data read", read_);
+            LOG(MY_DEBUG, "AES %lu data read", read_);
             if (read_ != dataInBuffer.size())
                 toWrite += pad((dataInBuffer.data() + read_), (16 - read_) % 16);
 
@@ -221,10 +222,10 @@ class AES
             output.write(reinterpret_cast<char *>(dataOutBuffer.data()), toWrite);
 
             alreadyEncrypted += read_;
-            LOG(DEBUG, "AES %lu bytes encrypted", alreadyEncrypted);
+            LOG(MY_DEBUG, "AES %lu bytes encrypted", alreadyEncrypted);
         }
 
-        LOG(INFO, "AES successfully encrypted %lu bytes", alreadyEncrypted);
+        LOG(MY_INFO, "AES successfully encrypted %lu bytes", alreadyEncrypted);
 
         mbedtls_aes_free(&ctx);
     }
@@ -232,14 +233,14 @@ class AES
     // decrypts "input" file to "output" file
     void decrypt(std::istream &input, std::ostream &output, size_t bytes)
     {
-        LOG(DEBUG, "AES Starting decryption");
+        LOG(MY_DEBUG, "AES Starting decryption");
 
-        LOG(DEBUG, "AES Setting up aes context");
+        LOG(MY_DEBUG, "AES Setting up aes context");
         mbedtls_aes_context ctx;
         mbedtls_aes_init(&ctx);
         key_.setDecContext(&ctx);
 
-        std::array<unsigned char, 16 * 500> dataInBuffer{0}, dataOutBuffer{0};
+        std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
         std::array<unsigned char, 16> iv = key_.incializationVector();
 
         size_t alreadyDecrypted = 0;
@@ -249,7 +250,7 @@ class AES
             input.read(reinterpret_cast<char *>(dataInBuffer.data()), (dataInBuffer.size() < (bytes - alreadyDecrypted) ? dataInBuffer.size() : (bytes - alreadyDecrypted)));
             read_ = input.gcount();
 
-            LOG(DEBUG, "AES %lu data read", read_);
+            LOG(MY_DEBUG, "AES %lu data read", read_);
 
             if (mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, read_, iv.data(),
                                       dataInBuffer.data(), dataOutBuffer.data()))
@@ -260,17 +261,44 @@ class AES
             output.write(reinterpret_cast<char *>(dataOutBuffer.data()), read_);
 
             alreadyDecrypted += read_;
-            LOG(DEBUG, "AES %lu bytes decrypted", alreadyDecrypted);
+            LOG(MY_DEBUG, "AES %lu bytes decrypted", alreadyDecrypted);
         }
 
-        LOG(INFO, "AES successfully decrypted %lu bytes", alreadyDecrypted);
+        LOG(MY_INFO, "AES successfully decrypted %lu bytes", alreadyDecrypted);
         mbedtls_aes_free(&ctx);
     }
 
     ~AES()
     {
-        LOG(DEBUG, "AES Destroying object");
+        LOG(MY_DEBUG, "AES Destroying object");
     }
 };
+
+// function hashing file
+inline std::array<unsigned char, 64> sha512(std::istream &input)
+{
+    LOG(MY_DEBUG, "SHA512 Generating hash");
+    mbedtls_sha512_context ctx;
+    mbedtls_sha512_init(&ctx);
+    mbedtls_sha512_starts(&ctx, 0);
+
+    std::array<unsigned char, 64> hash{};
+    std::array<unsigned char, 4096> buffer{};
+    size_t dataCount = 0;
+    do
+    {
+        input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+        mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
+        dataCount += input.gcount();
+        LOG(MY_DEBUG, "SHA512 already processed %lu, last read %d", dataCount, input.gcount());
+    } while (input.gcount() == buffer.size());
+    LOG(MY_DEBUG, "SHA512 hash generated out of %lu bytes", dataCount);
+
+    mbedtls_sha512_finish(&ctx, hash.data());
+    mbedtls_sha512_free(&ctx);
+    LOG(MY_INFO, "SHA512 hash successfully generated");
+    return hash;
+}
+
 
 #endif //AESFILE_MYAES_H
