@@ -20,10 +20,10 @@
  *  LOG(level, msg, ...)                      Macro simplifying logging.
  * 
  * FLAGS
- *  OUT_SYSLOG      Allows output to syslog
  *  OUT_STDERR      Allows output to standard error output
  *  OUT_FILE        Allows output to files
- * 
+ *  OUT_SYSLOG      Allows output to syslog. Only Linux
+ *
  * FILTERS
  *  FILTER_ERROR    Allows only errors to be logged.
  *  FILTER_WARN     Allows only warnings and higher priority messages to be logged. 
@@ -38,8 +38,10 @@
  *                            and line in which was logged)
  */
 
-
+#ifdef  __linux__
 #define OUT_SYSLOG 0b10000
+#endif
+
 #define OUT_FILE 0b100000
 #define OUT_STDERR 0b1000000
 
@@ -53,12 +55,17 @@
 #define INFO 0b10
 #define DEBUG 0b1
 
+#ifdef __linux__
 #define LOG(level, msg, ...)                                       \
     do                                                             \
     {                                                              \
         mySyslog(level, __FILE__, __LINE__, msg, ##__VA_ARGS__);   \
         logMessage(level, __FILE__, __LINE__, msg, ##__VA_ARGS__); \
     } while (0)
+#else
+#define LOG(level, msg, ...) logMessage(level, __FILE__, __LINE__, msg, ##__VA_ARGS__)
+#endif
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,7 +77,11 @@ void startMyLog(int flags,int filters, const char *identity);
 void closeMyLog(void);
 struct log_file *addFileToLog(const char *path);
 void logMessage(int level, const char *file, int line, const char *msg, ...);
+
+#ifdef __linux__
 void mySyslog(int logLvl, const char *file, int line, const char *msg, ...);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -276,12 +276,5 @@ void mySyslog(int logLvl, const char *filename, int line, const char *msg, ...)
 	}
 }
 
-#else
-void mySyslog(int logLvl, const char *filename, int line, const char *msg, ...) {
-    (void) logLvl;
-    (void) filename;
-    (void) line;
-    (void) msg;
-}
 
 #endif
