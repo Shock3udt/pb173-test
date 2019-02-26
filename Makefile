@@ -1,6 +1,6 @@
 LDFLAGS+= -L ./library/ -lmylog -lmbedtls
 CPPFLAGS+= -I ./include/
-CXXFLAGS+= -std=c++17 -Wall -Wextra
+CXXFLAGS+= -std=c++17 -pedantic -Wall -Wextra
 
 all: main test_main
 
@@ -22,5 +22,5 @@ library/libmbedtls.a:
 .PHONY: all clean test
 
 clean:
-	$(RM) main.o main test_main
+	$(RM) main.o main test_main.o test_main
 	cd ./library/ && $(MAKE) clean
