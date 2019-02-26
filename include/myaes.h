@@ -6,10 +6,9 @@
 #define AESFILE_MYAES_H
 
 #include <array>
-#include "litelog.h"
 #include <cstdint>
 #include <fstream>
-
+#include <iostream>
 #include "mbedtls/config.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/entropy.h"
@@ -19,14 +18,6 @@
 // keyBytes is number of bytes for key:
 //      (keyBytes == 16) => (key == 128 bit)
 //      (keyBytes == 32) => (key == 256 bit)
-template<size_t N>
-ll::Log &operator<<(ll::Log &os, std::array<unsigned char, N> &input) {
-    for (unsigned i = 0; i < N; i++) {
-        os << static_cast<int>(input[i]) << " ";
-    }
-    return os;
-}
-
 
 template <size_t keyBytes>
 class AES
@@ -85,7 +76,6 @@ class AES
         explicit Key() : iv{}, key{}
         {
             static_assert(keyBytes == 16 || keyBytes == 32);
-            ll::logging << ll::MessageLevel::Debug << "empty key (" << keyBytes << ") object created";
         }
 
         explicit Key(std::istream &source) : iv{}, key{}
@@ -99,9 +89,6 @@ class AES
             generateIV();
             generateKey();
 
-            ll::logging << ll::MessageLevel::Info << "New key generated";
-            ll::logging << ll::MessageLevel::Debug << "AES key: " << key;
-            ll::logging << ll::MessageLevel::Debug << "AES iv: " << iv;
         }
 
         // import key from file
@@ -118,9 +105,6 @@ class AES
             if (source.gcount() != 16)
                 throw std::runtime_error("invalid key file");
 
-            ll::logging << ll::MessageLevel::Info << "Key loaded from file";
-            ll::logging << ll::MessageLevel::Debug << "AES key" << key;
-            ll::logging << ll::MessageLevel::Debug << "AES iv:" << iv;
         }
 
 
@@ -160,7 +144,6 @@ class AES
     {
         if (bytesToPad == 0)
             bytesToPad = 16;
-        ll::logging << ll::MessageLevel::Debug << "AES padding " << bytesToPad << " bytes";
         for (int i = 0; i < bytesToPad; i++)
             *(ptr + i) = bytesToPad;
         return bytesToPad;
@@ -171,13 +154,12 @@ class AES
     {
         unsigned char bytesPaded = *lastByte;
 
-        ll::logging << ll::MessageLevel::Debug << "Padding " << bytesPaded << " bytes detected";
         if (bytesPaded > 16)
             throw std::runtime_error("Invalid padding");
         for (unsigned char i = 1; i < bytesPaded; i++)
             if (*(lastByte - i) != bytesPaded)
-                ll::logging << ll::MessageLevel::Warning << "AES Detected wrong padding at -" << i << " ("
-                            << *(lastByte - i) << ")";
+                std::cerr << "AES Detected wrong padding at -" << i << " ("
+                          << *(lastByte - i) << ")" << '\n';
         read_ -= bytesPaded;
         return bytesPaded;
     }
@@ -185,22 +167,18 @@ class AES
   public:
     AES() : key_()
     {
-        ll::logging << ll::MessageLevel::Debug << "AES Creating object with random genereated key";
         key_.generateNew();
     }
 
     explicit AES(Key key) : key_(std::move(key))
     {
-        ll::logging << ll::MessageLevel::Debug << "AES Creating object with supplied key";
     }
 
     // encrypts "input" file to "output" file
     void encrypt(std::istream &input, std::ostream &output)
     {
 
-        ll::logging << ll::MessageLevel::Debug << "AES Starting encryption";
 
-        ll::logging << ll::MessageLevel::Debug << "AES Setting up aes context";
         mbedtls_aes_context ctx;
         mbedtls_aes_init(&ctx);
         key_.setEncContext(&ctx);
@@ -217,7 +195,6 @@ class AES
             read_ = input.gcount();
             toWrite = read_;
 
-            ll::logging << ll::MessageLevel::Debug << "AES " << read_ << " data read";
             if (read_ != dataInBuffer.size())
                 toWrite += pad((dataInBuffer.data() + read_), (16 - read_) % 16);
 
@@ -228,10 +205,9 @@ class AES
             output.write(reinterpret_cast<char *>(dataOutBuffer.data()), toWrite);
 
             alreadyEncrypted += read_;
-            ll::logging << ll::MessageLevel::Debug << "AES " << alreadyEncrypted << " bytes encrypted";
         }
 
-        ll::logging << ll::MessageLevel::Info << "AES successfully encrypted " << alreadyEncrypted << " bytes";
+        std::cout << "AES successfully encrypted " << alreadyEncrypted << " bytes" << '\n';
 
         mbedtls_aes_free(&ctx);
     }
@@ -239,9 +215,7 @@ class AES
     // decrypts "input" file to "output" file
     void decrypt(std::istream &input, std::ostream &output, size_t bytes)
     {
-        ll::logging << ll::MessageLevel::Debug << "AES Starting decryption";
 
-        ll::logging << ll::MessageLevel::Debug << "AES Setting up aes context";
         mbedtls_aes_context ctx;
         mbedtls_aes_init(&ctx);
         key_.setDecContext(&ctx);
@@ -256,7 +230,6 @@ class AES
             input.read(reinterpret_cast<char *>(dataInBuffer.data()), (dataInBuffer.size() < (bytes - alreadyDecrypted) ? dataInBuffer.size() : (bytes - alreadyDecrypted)));
             read_ = input.gcount();
 
-            ll::logging << ll::MessageLevel::Debug << "AES " << read_ << " data read";
 
             if (mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, read_, iv.data(),
                                       dataInBuffer.data(), dataOutBuffer.data()))
@@ -267,23 +240,18 @@ class AES
             output.write(reinterpret_cast<char *>(dataOutBuffer.data()), read_);
 
             alreadyDecrypted += read_;
-            ll::logging << ll::MessageLevel::Debug << "AES " << alreadyDecrypted << " bytes decrypted";
         }
 
-        ll::logging << ll::MessageLevel::Info << "AES successfully decrypted " << alreadyDecrypted << " bytes";
+        std::cout << "AES successfully decrypted " << alreadyDecrypted << " bytes" << '\n';
         mbedtls_aes_free(&ctx);
     }
 
-    ~AES()
-    {
-        ll::logging << ll::MessageLevel::Debug << "AES Destroying object";
-    }
+
 };
 
 // function hashing file
 inline std::array<unsigned char, 64> sha512(std::istream &input)
 {
-    ll::logging << ll::MessageLevel::Debug << "SHA512 Generating hash";
     mbedtls_sha512_context ctx;
     mbedtls_sha512_init(&ctx);
     mbedtls_sha512_starts(&ctx, 0);
@@ -296,14 +264,11 @@ inline std::array<unsigned char, 64> sha512(std::istream &input)
         input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
         mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
         dataCount += input.gcount();
-        ll::logging << ll::MessageLevel::Debug << "SHA512 already processed " << dataCount << ", last read "
-                    << input.gcount();
     } while (input.gcount() == buffer.size());
-    ll::logging << ll::MessageLevel::Debug << "SHA512 hash generated out of " << dataCount << " bytes";
 
     mbedtls_sha512_finish(&ctx, hash.data());
     mbedtls_sha512_free(&ctx);
-    ll::logging << ll::MessageLevel::Info << "SHA512 hash successfully generated";
+    std::cout << "SHA512 hash successfully generated" << '\n';
     return hash;
 }
 

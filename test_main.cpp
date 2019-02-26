@@ -8,7 +8,6 @@
 #include <array>
 #include <iomanip>
 #include "catch.hpp"
-#include "litelog.h"
 
 std::ostream& operator<<(std::ostream& os, const std::array<unsigned char, 64>& hash) {
     os << std::hex ;
