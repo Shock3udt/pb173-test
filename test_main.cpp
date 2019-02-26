@@ -47,3 +47,4 @@ TEST_CASE("SHA-128") {
     REQUIRE(output.str() == expected_output);
 
 }
+
