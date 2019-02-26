@@ -1,7 +1,7 @@
 //
 // Created by ivan on 26.2.19.
 //
-
+#define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
 #define CATCH_CONFIG_MAIN
 #include "myaes.h"
 #include <sstream>
