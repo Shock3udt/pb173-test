@@ -60,11 +60,11 @@
 #define LOG(level, msg, ...)                                       \
     do                                                             \
     {                                                              \
-        mySyslog(level, __FILE__, __LINE__, msg, ##__VA_ARGS__);   \
-        logMessage(level, __FILE__, __LINE__, msg, ##__VA_ARGS__); \
+        mySyslog(level, __FILE__, __LINE__, msg __VA_OPT__(,) __VA_ARGS__);   \
+        logMessage(level, __FILE__, __LINE__, msg __VA_OPT__(,) __VA_ARGS__); \
     } while (0)
 #else
-#define LOG(level, msg, ...) logMessage(level, __FILE__, __LINE__, msg, ##__VA_ARGS__)
+#define LOG(level, msg, ...) logMessage(level, __FILE__, __LINE__, msg __VA_OPT__(,) __VA_ARGS__)
 #endif
 
 
