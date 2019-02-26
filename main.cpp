@@ -178,7 +178,7 @@ int main(int argc, char **argv)
             // read original hash
             status.input.clear();
             status.input.seekg(-64, std::ios::end);
-            std::array<unsigned char, 64> originalHash{0}, newHash{0};
+            std::array<unsigned char, 64> originalHash{}, newHash{};
             status.input.read(reinterpret_cast<char *>(originalHash.data()), 64);
             status.output.close();
 

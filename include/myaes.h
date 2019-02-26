@@ -75,12 +75,12 @@ class AES
       public:
         explicit Key() : iv{}, key{}
         {
-            static_assert(keyBytes == 16 || keyBytes == 32);
+            static_assert(keyBytes == 16UL || keyBytes == 32UL, "Allowed only 32B and 16B keys");
         }
 
         explicit Key(std::istream &source) : iv{}, key{}
         {
-            static_assert(keyBytes == 16 || keyBytes == 32);
+            static_assert(keyBytes == 16UL || keyBytes == 32UL, "Allowed only 32B and 16B keys");
             loadFromFile(source);
         }
 
