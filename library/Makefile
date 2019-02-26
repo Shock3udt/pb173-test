@@ -1,3 +1,5 @@
+CXXFLAGS = -I ../include
+
 
 all: libmbedtls.a libmylog.a
 
