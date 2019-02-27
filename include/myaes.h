@@ -19,7 +19,7 @@
 //      (keyBytes == 16) => (key == 128 bit)
 //      (keyBytes == 32) => (key == 256 bit)
 
-template <size_t keyBytes>
+
 class AES
 {
   public:
@@ -28,7 +28,7 @@ class AES
     {
       private:
         std::array<unsigned char, 16> iv;
-        std::array<unsigned char, keyBytes> key;
+        std::array<unsigned char, 16> key;
 
         // generates random key with DRBG
         void generateKey()
@@ -44,7 +44,7 @@ class AES
                                       &entropy, reinterpret_cast<unsigned char *>(const_cast<char *>(pers.data())), pers.size()))
                 throw std::runtime_error("AES KEY Failed to set seed for drbg");
 
-            if (mbedtls_ctr_drbg_random(&ctr_drbg, key.data(), keyBytes))
+            if (mbedtls_ctr_drbg_random(&ctr_drbg, key.data(), 16))
                 throw std::runtime_error("AES KEY Failed to generate random key");
 
             mbedtls_ctr_drbg_free(&ctr_drbg);
@@ -75,13 +75,25 @@ class AES
       public:
         explicit Key() : iv{}, key{}
         {
-            static_assert(keyBytes == 16UL || keyBytes == 32UL, "Allowed only 32B and 16B keys");
+            generateKey();
         }
 
         explicit Key(std::istream &source) : iv{}, key{}
         {
-            static_assert(keyBytes == 16UL || keyBytes == 32UL, "Allowed only 32B and 16B keys");
             loadFromFile(source);
+        }
+
+        Key(std::array<unsigned char, 16> keyArray, std::array<unsigned char, 16> ivArray) : iv(std::move(ivArray)),
+                                                                                             key(std::move(keyArray)) {
+
+        }
+
+        Key(const Key &o) : iv(o.iv), key(o.key) {}
+
+        Key &operator=(const Key &o) {
+            key = o.key;
+            iv = o.iv;
+            return *this;
         }
 
         void generateNew()
@@ -96,7 +108,7 @@ class AES
         {
             uint16_t keyLen = 0;
             source.read(reinterpret_cast<char *>(&keyLen), 2);
-            if (keyLen != keyBytes)
+            if (keyLen != 16)
                 throw std::runtime_error("Invalid key file");
 
             source.read(reinterpret_cast<char *>(key.data()), keyLen);
@@ -111,29 +123,29 @@ class AES
         // export key to file
         void save(std::ostream &os)
         {
-            uint16_t keyLen = keyBytes;
+            uint16_t keyLen = 16;
             os.write(reinterpret_cast<char *>(&keyLen), 2);
-            os.write(reinterpret_cast<char *>(key.data()), keyBytes);
+            os.write(reinterpret_cast<char *>(key.data()), 16);
             os.write(reinterpret_cast<char *>(iv.data()), iv.size());
         }
 
         // set aes context "ctx" for encryption
-        int setEncContext(mbedtls_aes_context *ctx)
+        int setEncContext(mbedtls_aes_context *ctx) const
         {
-            return mbedtls_aes_setkey_enc(ctx, key.data(), keyBytes * 8);
+            return mbedtls_aes_setkey_enc(ctx, key.data(), 16 * 8);
         }
 
         // set aes context "ctx" for decryption
-        int setDecContext(mbedtls_aes_context *ctx)
+        int setDecContext(mbedtls_aes_context *ctx) const
         {
-            return mbedtls_aes_setkey_dec(ctx, key.data(), keyBytes * 8);
+            return mbedtls_aes_setkey_dec(ctx, key.data(), 16 * 8);
         }
 
         // returns copy of incialization vector
         std::array<unsigned char, 16> incializationVector() { return iv; }
        
         // returns bitsize of key
-        size_t bitSize() { return keyBytes * 8; }
+        size_t bitSize() { return 16 * 8; }
     };
 
   private:
@@ -175,7 +187,7 @@ class AES
     }
 
     // encrypts "input" file to "output" file
-    void encrypt(std::istream &input, std::ostream &output)
+    size_t encrypt(std::istream &input, std::ostream &output)
     {
 
 
@@ -207,13 +219,14 @@ class AES
             alreadyEncrypted += read_;
         }
 
-        std::cout << "AES successfully encrypted " << alreadyEncrypted << " bytes" << '\n';
 
         mbedtls_aes_free(&ctx);
+
+        return alreadyEncrypted;
     }
 
     // decrypts "input" file to "output" file
-    void decrypt(std::istream &input, std::ostream &output, size_t bytes)
+    size_t decrypt(std::istream &input, std::ostream &output, size_t bytes)
     {
 
         mbedtls_aes_context ctx;
@@ -242,8 +255,8 @@ class AES
             alreadyDecrypted += read_;
         }
 
-        std::cout << "AES successfully decrypted " << alreadyDecrypted << " bytes" << '\n';
         mbedtls_aes_free(&ctx);
+        return alreadyDecrypted;
     }
 
 
@@ -268,7 +281,7 @@ inline std::array<unsigned char, 64> sha512(std::istream &input)
 
     mbedtls_sha512_finish(&ctx, hash.data());
     mbedtls_sha512_free(&ctx);
-    std::cout << "SHA512 hash successfully generated" << '\n';
+
     return hash;
 }
 

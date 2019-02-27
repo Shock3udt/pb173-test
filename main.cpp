@@ -118,7 +118,7 @@ int main(int argc, char **argv)
     try
     {
         // generating / loading key
-        AES<16>::Key key;
+        AES::Key key;
 
         if (cmdOptionExists(argv, argv + argc, "-k"))
         {
@@ -152,11 +152,13 @@ int main(int argc, char **argv)
                 key.save(keyFile);
         }
 
-        AES<16> crypt(key);
+        AES crypt(key);
         if (status.mode == Status::Encrypt)
         {
             // encrypt file and rewind
-            crypt.encrypt(status.input, status.output);
+            size_t filesize = crypt.encrypt(status.input, status.output);
+            std::cout << filesize << "B successfully encrypted\n";
+
             status.input.clear();
             status.input.seekg(0);
 
@@ -173,7 +175,8 @@ int main(int argc, char **argv)
             // rewind and decrypt file
             status.input.clear();
             status.input.seekg(0);
-            crypt.decrypt(status.input, status.output, bytes);
+            size_t filesize = crypt.decrypt(status.input, status.output, bytes);
+            std::cout << filesize << "B decrypted";
 
             // read original hash
             status.input.clear();
