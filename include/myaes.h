@@ -6,7 +6,6 @@
 #define AESFILE_MYAES_H
 
 #include <array>
-#include <cstdint>
 #include <fstream>
 #include <iostream>
 #include "mbedtls/config.h"
@@ -31,264 +30,67 @@ class AES
         std::array<unsigned char, 16> key;
 
         // generates random key with DRBG
-        void generateKey()
-        {
-            mbedtls_ctr_drbg_context ctr_drbg;
-            mbedtls_entropy_context entropy;
-            std::string pers = "aes generate key";
-
-            mbedtls_entropy_init(&entropy);
-            mbedtls_ctr_drbg_init(&ctr_drbg);
-
-            if (mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func,
-                                      &entropy, reinterpret_cast<unsigned char *>(const_cast<char *>(pers.data())), pers.size()))
-                throw std::runtime_error("AES KEY Failed to set seed for drbg");
-
-            if (mbedtls_ctr_drbg_random(&ctr_drbg, key.data(), 16))
-                throw std::runtime_error("AES KEY Failed to generate random key");
-
-            mbedtls_ctr_drbg_free(&ctr_drbg);
-            mbedtls_entropy_free(&entropy);
-        }
+        void generateKey();
 
         // generates random incialization vector with DRBG
-        void generateIV()
-        {
-            mbedtls_ctr_drbg_context ctr_drbg;
-            mbedtls_entropy_context entropy;
-            std::string pers = "aes generate iv";
-
-            mbedtls_entropy_init(&entropy);
-            mbedtls_ctr_drbg_init(&ctr_drbg);
-
-            if (mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func,
-                                      &entropy, reinterpret_cast<unsigned char *>(const_cast<char *>(pers.data())), pers.size()))
-                throw std::runtime_error("AES KEY Failed to set seed for drbg");
-
-            if (mbedtls_ctr_drbg_random(&ctr_drbg, iv.data(), 16))
-                throw std::runtime_error("AES KEY Failed to generate random iv");
-
-            mbedtls_ctr_drbg_free(&ctr_drbg);
-            mbedtls_entropy_free(&entropy);
-        }
+        void generateIV();
 
       public:
-        explicit Key() : iv{}, key{}
-        {
-            generateKey();
-        }
+        explicit Key();
 
-        explicit Key(std::istream &source) : iv{}, key{}
-        {
-            loadFromFile(source);
-        }
+        explicit Key(std::istream &source);
 
-        Key(std::array<unsigned char, 16> &keyArray, std::array<unsigned char, 16> &ivArray) : iv(ivArray),
-                                                                                               key(keyArray) {
-
-        }
+        Key(std::array<unsigned char, 16> &keyArray, std::array<unsigned char, 16> &ivArray);
 
         Key(const Key &o) = default;
 
         Key &operator=(const Key &o) = default;
 
-        void generateNew()
-        {
-            generateIV();
-            generateKey();
-
-        }
+        void generateNew();
 
         // import key from file
-        void loadFromFile(std::istream &source)
-        {
-            uint16_t keyLen = 0;
-            source.read(reinterpret_cast<char *>(&keyLen), 2);
-            if (keyLen != 16)
-                throw std::runtime_error("Invalid key file");
-
-            source.read(reinterpret_cast<char *>(key.data()), keyLen);
-            source.read(reinterpret_cast<char *>(iv.data()), 16);
-
-            if (source.gcount() != 16)
-                throw std::runtime_error("invalid key file");
-
-        }
-
+        void loadFromFile(std::istream &source);
 
         // export key to file
-        void save(std::ostream &os)
-        {
-            uint16_t keyLen = 16;
-            os.write(reinterpret_cast<char *>(&keyLen), 2);
-            os.write(reinterpret_cast<char *>(key.data()), 16);
-            os.write(reinterpret_cast<char *>(iv.data()), iv.size());
-        }
+        void save(std::ostream &os);
 
         // set aes context "ctx" for encryption
-        int setEncContext(mbedtls_aes_context *ctx) const
-        {
-            return mbedtls_aes_setkey_enc(ctx, key.data(), 16 * 8);
-        }
+        int setEncContext(mbedtls_aes_context *ctx) const;
 
         // set aes context "ctx" for decryption
-        int setDecContext(mbedtls_aes_context *ctx) const
-        {
-            return mbedtls_aes_setkey_dec(ctx, key.data(), 16 * 8);
-        }
+        int setDecContext(mbedtls_aes_context *ctx) const;
 
         // returns copy of incialization vector
-        std::array<unsigned char, 16> incializationVector() { return iv; }
+        std::array<unsigned char, 16> incializationVector();
        
-        // returns bitsize of key
-        size_t bitSize() { return 16 * 8; }
     };
 
   private:
     Key key_;
 
     // pad 16 bytes block with PKCS#7 padding
-    int pad(unsigned char *ptr, unsigned char bytesToPad)
-    {
-        if (bytesToPad == 0)
-            bytesToPad = 16;
-        for (int i = 0; i < bytesToPad; i++)
-            *(ptr + i) = bytesToPad;
-        return bytesToPad;
-    }
+    int pad(unsigned char *ptr, unsigned char bytesToPad);
 
     // remove PKCS#7 padding
-    int unpad(const unsigned char *lastByte, size_t &read_)
-    {
-        unsigned char bytesPaded = *lastByte;
-
-        if (bytesPaded > 16)
-            throw std::runtime_error("Invalid padding");
-        for (unsigned char i = 1; i < bytesPaded; i++)
-            if (*(lastByte - i) != bytesPaded)
-                std::cerr << "AES Detected wrong padding at -" << i << " ("
-                          << *(lastByte - i) << ")" << '\n';
-        read_ -= bytesPaded;
-        return bytesPaded;
-    }
-
+    int unpad(const unsigned char *lastByte, size_t &read_);
   public:
-    AES() : key_()
-    {
-        key_.generateNew();
-    }
+    AES();
 
-    explicit AES(const Key &key) : key_(key)
-    {
-    }
+    explicit AES(const Key &key);
 
     // encrypts "input" file to "output" file
-    size_t encrypt(std::istream &input, std::ostream &output)
-    {
-
-
-        mbedtls_aes_context ctx;
-        mbedtls_aes_init(&ctx);
-        key_.setEncContext(&ctx);
-
-        std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
-        std::array<unsigned char, 16> iv = key_.incializationVector();
-
-        size_t alreadyEncrypted = 0;
-        size_t read_ = dataInBuffer.size();
-        size_t toWrite = read_;
-        while (read_ == dataInBuffer.size())
-        {
-            input.read(reinterpret_cast<char *>(dataInBuffer.data()), dataInBuffer.size());
-            read_ = input.gcount();
-            toWrite = read_;
-
-            if (read_ != dataInBuffer.size())
-                toWrite += pad((dataInBuffer.data() + read_), (16 - read_) % 16);
-
-            if (mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, toWrite, iv.data(),
-                                      dataInBuffer.data(), dataOutBuffer.data()))
-                throw std::runtime_error("AES encryption failed");
-
-            output.write(reinterpret_cast<char *>(dataOutBuffer.data()), toWrite);
-
-            alreadyEncrypted += read_;
-        }
-
-
-        mbedtls_aes_free(&ctx);
-
-        return alreadyEncrypted;
-    }
+    size_t encrypt(std::istream &input, std::ostream &output);
 
     // decrypts "input" file to "output" file
-    size_t decrypt(std::istream &input, std::ostream &output, size_t bytes)
-    {
+    size_t decrypt(std::istream &input, std::ostream &output, size_t bytes);
 
-        mbedtls_aes_context ctx;
-        mbedtls_aes_init(&ctx);
-        key_.setDecContext(&ctx);
-
-        std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
-        std::array<unsigned char, 16> iv = key_.incializationVector();
-
-        size_t alreadyDecrypted = 0;
-        size_t read_ = 0;
-        while (input.tellg() < static_cast<ssize_t>(bytes))
-        {
-            input.read(reinterpret_cast<char *>(dataInBuffer.data()), (dataInBuffer.size() < (bytes - alreadyDecrypted) ? dataInBuffer.size() : (bytes - alreadyDecrypted)));
-            read_ = input.gcount();
-
-
-            if (mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_DECRYPT, read_, iv.data(),
-                                      dataInBuffer.data(), dataOutBuffer.data()))
-                throw std::runtime_error("AES decryption failed");
-
-            if (alreadyDecrypted + read_ >= bytes)
-                unpad((dataOutBuffer.data() + read_ - 1), read_);
-            output.write(reinterpret_cast<char *>(dataOutBuffer.data()), read_);
-
-            alreadyDecrypted += read_;
-        }
-
-        mbedtls_aes_free(&ctx);
-        return alreadyDecrypted;
-    }
-
-    size_t decrypt(std::istream &input, std::ostream &output) {
-        auto original = input.tellg();
-        input.seekg(0, std::ios::end);
-        size_t delta = input.tellg() - original;
-        input.seekg(original);
-        return decrypt(input, output, delta);
-
-    }
+    size_t decrypt(std::istream &input, std::ostream &output);
 
 
 };
 
 // function hashing file
-inline std::array<unsigned char, 64> sha512(std::istream &input)
-{
-    mbedtls_sha512_context ctx;
-    mbedtls_sha512_init(&ctx);
-    mbedtls_sha512_starts(&ctx, 0);
-
-    std::array<unsigned char, 64> hash{};
-    std::array<unsigned char, 4096> buffer{};
-    size_t dataCount = 0;
-    do
-    {
-        input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
-        mbedtls_sha512_update(&ctx, buffer.data(), input.gcount());
-        dataCount += input.gcount();
-    } while (input.gcount() == buffer.size());
-
-    mbedtls_sha512_finish(&ctx, hash.data());
-    mbedtls_sha512_free(&ctx);
-
-    return hash;
-}
+std::array<unsigned char, 64> sha512(std::istream &input);
 
 
 #endif //AESFILE_MYAES_H

@@ -145,7 +145,7 @@ TEST_CASE("Encrypting and then decrypting") {
             toEncrypt = "0123456789";
         }
         SECTION("1 000 000 x \"a\"") {
-            toEncrypt = std::string(100, 'a');
+            toEncrypt = std::string(1000000, 'a');
         }
 
         //encrypting
