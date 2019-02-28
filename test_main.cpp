@@ -166,3 +166,125 @@ TEST_CASE("Encrypting and then decrypting") {
         REQUIRE((threwAnException || toEncrypt != decOut.str()));
     }
 }
+
+TEST_CASE("PADDING TEST") {
+    std::vector< char> in1;
+    std::vector< char> in2;
+    SECTION("padding 16") {
+        SECTION("Shortest possible input") {
+            in1 = {};
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100, 'a');
+        }
+
+        in2 = in1;
+        std::vector tmp(16, 16);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+        INFO("padding 16");
+    }
+    SECTION("padding 15") {
+
+        SECTION("Shortest possible input") {
+            in1 = std::vector<char>(1, 'a');
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16 + 1, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100 + 1, 'a');
+        }
+        in1 = std::vector<char>('a', 1);
+        in2 = in1;
+        std::vector tmp(15, 15);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+        INFO("padding 15");
+
+    }
+    SECTION("padding 14") {
+
+        SECTION("Shortest possible input") {
+            in1 = std::vector<char>(2, 'a');
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16 + 2, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100 + 2, 'a');
+        }
+        in2 = in1;
+        std::vector tmp(14, 14);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+
+        INFO("padding 14");
+    }
+
+    SECTION("padding 3") {
+        SECTION("Shortest possible input") {
+            in1 = std::vector<char>(13, 'a');
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16 + 13, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100 + 13, 'a');
+        }
+        in2 = in1;
+        std::vector tmp(3, 3);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+
+        INFO("padding 3");
+    }
+
+    SECTION("padding 2") {
+        SECTION("Shortest possible input") {
+            in1 = std::vector<char>(14, 'a');
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16 + 14, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100 + 14, 'a');
+        }
+        in2 = in1;
+        std::vector tmp(2, 2);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+
+        INFO("padding 2");
+    }
+    SECTION("padding 1") {
+        SECTION("Shortest possible input") {
+            in1 = std::vector<char>(15, 'a');
+        }
+        SECTION("slightly longer input") {
+            in1 = std::vector<char>(16 + 15, 'a');
+        }
+        SECTION("very long input") {
+            in1 = std::vector<char>(16*100 + 15, 'a');
+        }
+        in2 = in1;
+        std::vector tmp(1, 1);
+        std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
+
+        INFO("padding 1");
+    }
+
+    AES enc;
+
+    std::stringstream sIn1;
+    sIn1.write(in1.data(), in1.size());
+    std::stringstream sIn2;
+    sIn2.write(in2.data(), in2.size());
+    std::stringstream sOut1;
+    std::stringstream sOut2;
+    enc.encrypt(sIn1, sOut1);
+    enc.encrypt(sIn2, sOut2);
+    INFO(sOut1.str().length());
+    INFO(sOut2.str().length());
+    REQUIRE(sOut1.str() == sOut2.str().substr(0, sOut2.str().size() - 16));
+
+}
+
