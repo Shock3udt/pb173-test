@@ -256,7 +256,7 @@ class AES
     }
 
     size_t decrypt(std::istream &input, std::ostream &output) {
-        std::fpos original = input.tellg();
+        auto original = input.tellg();
         input.seekg(0, std::ios::end);
         size_t delta = input.tellg() - original;
         input.seekg(original);
