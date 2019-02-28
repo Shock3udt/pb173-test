@@ -19,7 +19,7 @@ std::ostream &operator<<(std::ostream &os, const std::array<unsigned char, N> &h
     return os;
 }
 
-TEST_CASE("SHA-128 simple tests") {
+TEST_CASE("SHA-128 test vectors") {
 
     std::stringstream input{};
     std::string expected_output{};
@@ -49,7 +49,7 @@ TEST_CASE("SHA-128 simple tests") {
 
 }
 
-TEST_CASE("AES-128 simple tests") {
+TEST_CASE("AES-128 test vectors") {
     std::array<unsigned char, 16> key{0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09,
                                       0xcf, 0x4f, 0x3c};
     std::array<unsigned char, 16> iv{};
@@ -81,14 +81,88 @@ TEST_CASE("AES-128 simple tests") {
     }
 
 
-    AES::Key AESkey = {key, iv};
+    std::stringstream sIn{};
+    std::stringstream sOut{};
 
-    mbedtls_aes_context ctx;
-    mbedtls_aes_init(&ctx);
-    AESkey.setEncContext(&ctx);
-    mbedtls_aes_crypt_cbc(&ctx, MBEDTLS_AES_ENCRYPT, input.size(), iv.data(), input.data(), output.data());
-    std::stringstream ss{};
-    ss << output;
-    REQUIRE(expected == ss.str());
-    mbedtls_aes_free(&ctx);
+    sIn.write(reinterpret_cast<char *>(input.data()), input.size());
+
+    AES::Key aesKey = {key, iv};
+
+    AES enc(aesKey);
+    enc.encrypt(sIn, sOut);
+
+    sOut.read(reinterpret_cast<char *>(output.data()), output.size());
+
+    std::stringstream toCompare{};
+    toCompare << output;
+
+    REQUIRE(expected == toCompare.str());
+
+}
+
+TEST_CASE("Encrypting and then decrypting") {
+
+    SECTION("with the same key") {
+        AES::Key k;
+        k.generateNew();
+
+        std::string toEncrypt;
+        SECTION("\"\"") {
+            toEncrypt = "";
+        }
+        SECTION("\"0123456789\"") {
+            toEncrypt = "0123456789";
+        }
+        SECTION("1 000 000 x \"a\"") {
+            toEncrypt = std::string(1000000, 'a');
+        }
+
+        AES enc(k);
+
+        //encrypting
+        std::stringstream encIn{toEncrypt};
+        std::stringstream encOut;
+        enc.encrypt(encIn, encOut);
+
+        //decrypting
+        std::stringstream decOut;
+        enc.decrypt(encOut, decOut);
+
+        REQUIRE(toEncrypt == decOut.str());
+    }
+
+
+    SECTION("with the different key") {
+        AES::Key k1, k2;
+        k1.generateNew();
+        k2.generateNew();
+
+        std::string toEncrypt;
+        SECTION("\"\"") {
+            toEncrypt = "";
+        }
+        SECTION("\"0123456789\"") {
+            toEncrypt = "0123456789";
+        }
+        SECTION("1 000 000 x \"a\"") {
+            toEncrypt = std::string(100, 'a');
+        }
+
+        //encrypting
+        AES enc(k1);
+        std::stringstream encIn{toEncrypt};
+        std::stringstream encOut;
+        enc.encrypt(encIn, encOut);
+
+        //decrypting
+        AES dec(k2);
+        std::stringstream decOut;
+        bool threwAnException = false;
+        try {
+            dec.decrypt(encOut, decOut);
+        } catch (...) {
+            threwAnException = true;
+        }
+        REQUIRE((threwAnException || toEncrypt != decOut.str()));
+    }
 }

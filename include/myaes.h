@@ -83,18 +83,14 @@ class AES
             loadFromFile(source);
         }
 
-        Key(std::array<unsigned char, 16> keyArray, std::array<unsigned char, 16> ivArray) : iv(std::move(ivArray)),
-                                                                                             key(std::move(keyArray)) {
+        Key(std::array<unsigned char, 16> &keyArray, std::array<unsigned char, 16> &ivArray) : iv(ivArray),
+                                                                                               key(keyArray) {
 
         }
 
-        Key(const Key &o) : iv(o.iv), key(o.key) {}
+        Key(const Key &o) = default;
 
-        Key &operator=(const Key &o) {
-            key = o.key;
-            iv = o.iv;
-            return *this;
-        }
+        Key &operator=(const Key &o) = default;
 
         void generateNew()
         {
@@ -182,7 +178,7 @@ class AES
         key_.generateNew();
     }
 
-    explicit AES(Key key) : key_(std::move(key))
+    explicit AES(const Key &key) : key_(key)
     {
     }
 
@@ -257,6 +253,15 @@ class AES
 
         mbedtls_aes_free(&ctx);
         return alreadyDecrypted;
+    }
+
+    size_t decrypt(std::istream &input, std::ostream &output) {
+        std::fpos original = input.tellg();
+        input.seekg(0, std::ios::end);
+        size_t delta = input.tellg() - original;
+        input.seekg(original);
+        return decrypt(input, output, delta);
+
     }
 
 
