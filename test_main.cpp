@@ -182,7 +182,7 @@ TEST_CASE("PADDING TEST") {
         }
 
         in2 = in1;
-        std::vector tmp(16, 16);
+        std::vector<char> tmp(16, 16);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
         INFO("padding 16");
     }
@@ -199,7 +199,7 @@ TEST_CASE("PADDING TEST") {
         }
         in1 = std::vector<char>('a', 1);
         in2 = in1;
-        std::vector tmp(15, 15);
+        std::vector<char> tmp(15, 15);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
         INFO("padding 15");
 
@@ -216,7 +216,7 @@ TEST_CASE("PADDING TEST") {
             in1 = std::vector<char>(16*100 + 2, 'a');
         }
         in2 = in1;
-        std::vector tmp(14, 14);
+        std::vector<char> tmp(14, 14);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
 
         INFO("padding 14");
@@ -233,7 +233,7 @@ TEST_CASE("PADDING TEST") {
             in1 = std::vector<char>(16*100 + 13, 'a');
         }
         in2 = in1;
-        std::vector tmp(3, 3);
+        std::vector<char> tmp(3, 3);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
 
         INFO("padding 3");
@@ -250,7 +250,7 @@ TEST_CASE("PADDING TEST") {
             in1 = std::vector<char>(16*100 + 14, 'a');
         }
         in2 = in1;
-        std::vector tmp(2, 2);
+        std::vector<char> tmp(2, 2);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
 
         INFO("padding 2");
@@ -266,7 +266,7 @@ TEST_CASE("PADDING TEST") {
             in1 = std::vector<char>(16*100 + 15, 'a');
         }
         in2 = in1;
-        std::vector tmp(1, 1);
+        std::vector<char> tmp(1, 1);
         std::copy(tmp.begin(), tmp.end(), std::back_inserter(in2));
 
         INFO("padding 1");
