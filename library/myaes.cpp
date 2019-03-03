@@ -55,11 +55,11 @@ void AES::Key::generateIV() {
     mbedtls_entropy_free(&entropy);
 }
 
-AES::Key::Key() : iv{}, key{} {
+AES::Key::Key() : iv(), key() {
     generateKey();
 }
 
-AES::Key::Key(std::istream &source) : iv{}, key{} {
+AES::Key::Key(std::istream &source) : iv(), key() {
     loadFromFile(source);
 }
 
@@ -150,7 +150,7 @@ size_t AES::encrypt(std::istream &input, std::ostream &output) {
     mbedtls_aes_init(&ctx);
     key_.setEncContext(&ctx);
 
-    std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
+    std::array<unsigned char, 16 * 500> dataInBuffer, dataOutBuffer;
     std::array<unsigned char, 16> iv = key_.incializationVector();
 
     size_t alreadyEncrypted = 0;
@@ -186,7 +186,7 @@ size_t AES::decrypt(std::istream &input, std::ostream &output, size_t bytes) {
     mbedtls_aes_init(&ctx);
     key_.setDecContext(&ctx);
 
-    std::array<unsigned char, 16 * 500> dataInBuffer{}, dataOutBuffer{};
+    std::array<unsigned char, 16 * 500> dataInBuffer, dataOutBuffer;
     std::array<unsigned char, 16> iv = key_.incializationVector();
 
     size_t alreadyDecrypted = 0;
@@ -229,8 +229,8 @@ std::array<unsigned char, 64> sha512(std::istream &input) {
     mbedtls_sha512_init(&ctx);
     mbedtls_sha512_starts(&ctx, 0);
 
-    std::array<unsigned char, 64> hash{};
-    std::array<unsigned char, 4096> buffer{};
+    std::array<unsigned char, 64> hash;
+    std::array<unsigned char, 4096> buffer;
     size_t dataCount = 0;
     do {
         input.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
