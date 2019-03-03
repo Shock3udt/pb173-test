@@ -21,9 +21,9 @@ std::ostream &operator<<(std::ostream &os, const std::array<unsigned char, N> &h
 
 TEST_CASE("SHA-128 test vectors") {
 
-    std::stringstream input{};
-    std::string expected_output{};
-    std::stringstream output{};
+    std::stringstream input;
+    std::string expected_output;
+    std::stringstream output;
     SECTION("\"abc\"") {
         input.str("abc");
         expected_output = "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f";
@@ -52,10 +52,10 @@ TEST_CASE("SHA-128 test vectors") {
 TEST_CASE("AES-128 test vectors") {
     std::array<unsigned char, 16> key{0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09,
                                       0xcf, 0x4f, 0x3c};
-    std::array<unsigned char, 16> iv{};
-    std::array<unsigned char, 16> input{};
+    std::array<unsigned char, 16> iv;
+    std::array<unsigned char, 16> input;
     std::string expected;
-    std::array<unsigned char, 16> output{};
+    std::array<unsigned char, 16> output;
 
     SECTION("Section 1") {
         iv = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F};
@@ -81,8 +81,8 @@ TEST_CASE("AES-128 test vectors") {
     }
 
 
-    std::stringstream sIn{};
-    std::stringstream sOut{};
+    std::stringstream sIn;
+    std::stringstream sOut;
 
     sIn.write(reinterpret_cast<char *>(input.data()), input.size());
 
