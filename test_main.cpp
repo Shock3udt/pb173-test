@@ -1,8 +1,7 @@
 //
 // Created by ivan on 26.2.19.
 //
-#define CATCH_CONFIG_NO_CPP17_UNCAUGHT_EXCEPTIONS
-#define CATCH_CONFIG_MAIN
+
 #include "myaes.h"
 #include <sstream>
 #include <array>
@@ -288,3 +287,60 @@ TEST_CASE("PADDING TEST") {
 
 }
 
+TEST_CASE("Corrupted data") {
+    std::string toEncrypt;
+    int nth = 0;
+    SECTION("first") {
+        SECTION("\"\"") {
+            toEncrypt = "";
+        }
+        SECTION("\"0123456789\"") {
+            toEncrypt = "0123456789";
+        }
+        SECTION("16 x \"a\"") {
+            toEncrypt = std::string(16, 'a');
+        }
+        nth = 0;
+    }
+    SECTION("16the") {
+        SECTION("\"\"") {
+            toEncrypt = "";
+        }
+        SECTION("\"0123456789\"") {
+            toEncrypt = "0123456789";
+        }
+        SECTION("16 x \"a\"") {
+            toEncrypt = std::string(16, 'a');
+        }
+        nth = 15;
+    }
+    //encrypting
+    AES enc;
+    std::stringstream encIn{toEncrypt};
+    std::stringstream encOut;
+    enc.encrypt(encIn, encOut);
+
+    // introducing error
+    std::array<char, 16> tmp;
+    for (int i = 0; i < nth; ++i) {
+        tmp[i] = encOut.get();
+    }
+    encOut.putback(encOut.get() ^ 0xff);
+
+    for (int i = nth - 1; i >= 0; --i) {
+        encOut.putback(tmp[i]);
+    }
+
+    //decrypting
+    INFO(toEncrypt);
+    std::stringstream decOut;
+    CHECK_THROWS(enc.decrypt(encOut, decOut));
+}
+
+TEST_CASE("Invalid file") {
+    std::ifstream f("file_which_does_not_exist.why");
+    // not sure how to generaly test file i cannot write to
+    AES enc;
+    std::stringstream ss;
+    CHECK_THROWS(enc.encrypt(f, ss));
+}

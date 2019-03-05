@@ -129,8 +129,7 @@ int AES::unpad(const unsigned char *lastByte, size_t &read_) {
         throw std::runtime_error("Invalid padding");
     for (unsigned char i = 1; i < bytesPaded; i++)
         if (*(lastByte - i) != bytesPaded)
-            std::cerr << "AES Detected wrong padding at -" << i << " ("
-                      << *(lastByte - i) << ")" << '\n';
+            throw std::runtime_error("Invalid padding");
     read_ -= bytesPaded;
     return bytesPaded;
 }
@@ -156,7 +155,7 @@ size_t AES::encrypt(std::istream &input, std::ostream &output) {
     size_t alreadyEncrypted = 0;
     size_t read_ = dataInBuffer.size();
     size_t toWrite = read_;
-    while (read_ == dataInBuffer.size()) {
+    while (read_ == dataInBuffer.size() && output.good()) {
         input.read(reinterpret_cast<char *>(dataInBuffer.data()), dataInBuffer.size());
         read_ = input.gcount();
         toWrite = read_;
@@ -175,13 +174,16 @@ size_t AES::encrypt(std::istream &input, std::ostream &output) {
 
 
     mbedtls_aes_free(&ctx);
+    if (!input.good() && !input.eof())
+        throw std::runtime_error("Wrong input file");
 
+    if (!output.good())
+        throw std::runtime_error("Wrong output file");
     return alreadyEncrypted;
 }
 
 // decrypts "input" file to "output" file
 size_t AES::decrypt(std::istream &input, std::ostream &output, size_t bytes) {
-
     mbedtls_aes_context ctx;
     mbedtls_aes_init(&ctx);
     key_.setDecContext(&ctx);
@@ -191,7 +193,7 @@ size_t AES::decrypt(std::istream &input, std::ostream &output, size_t bytes) {
 
     size_t alreadyDecrypted = 0;
     size_t read_ = 0;
-    while (input.tellg() < static_cast<ssize_t>(bytes)) {
+    while (input.tellg() < static_cast<ssize_t>(bytes) && output.good()) {
         input.read(reinterpret_cast<char *>(dataInBuffer.data()),
                    (dataInBuffer.size() < (bytes - alreadyDecrypted) ? dataInBuffer.size() : (bytes -
                                                                                               alreadyDecrypted)));
@@ -210,6 +212,11 @@ size_t AES::decrypt(std::istream &input, std::ostream &output, size_t bytes) {
     }
 
     mbedtls_aes_free(&ctx);
+    if (!input.good() && !input.eof())
+        throw std::runtime_error("Wrong input file");
+
+    if (!output.good())
+        throw std::runtime_error("Wrong output file");
     return alreadyDecrypted;
 }
 

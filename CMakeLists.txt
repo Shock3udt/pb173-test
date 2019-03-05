@@ -14,7 +14,7 @@ set(MBEDTLS_SOURCE_FILES library/aes.c library/aesni.c library/ctr_drbg.c librar
 add_library(mbedtls STATIC ${MBEDTLS_SOURCE_FILES})
 
 add_executable(main library/myaes.cpp main.cpp)
-add_executable(test_main library/myaes.cpp test_main.cpp)
+add_executable(test_main catch_main.cpp library/myaes.cpp test_main.cpp)
 
 target_link_libraries(main PRIVATE mbedtls)
 target_link_libraries(test_main PRIVATE mbedtls)
