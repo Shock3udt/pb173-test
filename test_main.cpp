@@ -337,9 +337,9 @@ TEST_CASE("Corrupted data") {
     CHECK_THROWS(enc.decrypt(encOut, decOut));
 }
 
+// to satisfy assignment
 TEST_CASE("Invalid file") {
     std::ifstream f("file_which_does_not_exist.why");
-    // not sure how to generaly test file i cannot write to
     AES enc;
     std::stringstream ss;
     CHECK_THROWS(enc.encrypt(f, ss));
